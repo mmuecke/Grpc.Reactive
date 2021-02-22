@@ -5,7 +5,12 @@ VisualStudioVersion = 16.0.31005.135
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Grpc.Reactive", "Grpc.Reactive\Grpc.Reactive.csproj", "{47E5A4F4-749A-4F1E-8EBD-D4F975BA5620}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grpc.Reactive.Test", "Grpc.Reactive.Test\Grpc.Reactive.Test.csproj", "{8DF34C23-C80D-4301-ABEA-B53FC54D92F2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Grpc.Reactive.Test", "Grpc.Reactive.Test\Grpc.Reactive.Test.csproj", "{8DF34C23-C80D-4301-ABEA-B53FC54D92F2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F4981768-CE47-4A9D-9307-B902942C3C74}"
+	ProjectSection(SolutionItems) = preProject
+		..\Directory.Build.props = ..\Directory.Build.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
