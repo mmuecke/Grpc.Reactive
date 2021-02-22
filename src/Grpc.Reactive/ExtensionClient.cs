@@ -4,7 +4,6 @@ using Grpc.Reactive.Context;
 using System;
 using System.Linq;
 using System.Reactive;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 
@@ -136,8 +135,7 @@ namespace Grpc.Reactive
 
             return Observable.Defer(() => observable
                 .WriteTo(asyncDuplexStreamingCall.RequestStream)
-                .IgnoreElements()
-                .Select<Unit, MessageWithContext<TResponse, IStreamingCallContext>>(_ => null)
+                .IgnoreElementsAndCast<MessageWithContext<TResponse, IStreamingCallContext>>()
                 .Merge(asyncDuplexStreamingCall.OnResponse()));
         }
 
@@ -162,9 +160,13 @@ namespace Grpc.Reactive
 
             return Observable.Defer(() => observable
                 .WriteTo(asyncClientStreamingCall.RequestStream)
-                .IgnoreElements()
-                .Select<Unit, TResponse>(_ => null)
+                .IgnoreElementsAndCast<TResponse>()
                 .Merge(asyncClientStreamingCall.ResponseAsync.ToObservable()));
+        }
+
+        private static IObservable<T> IgnoreElementsAndCast<T>(this IObservable<Unit> observable)
+        {
+            return Observable.Create<T>(observer => observable.Subscribe(_ => { }, ex => observer.OnError(ex), () => observer.OnCompleted()));
         }
 
         /// <summary>
@@ -179,26 +181,11 @@ namespace Grpc.Reactive
             this IAsyncStreamReader<TResponse> asyncStreamReader, IStreamingCallContext streamingCallContext, IDisposable callCleanUp)
             where TResponse : class, IMessage<TResponse>
         {
-            if (asyncStreamReader is null)
-                throw new ArgumentNullException(nameof(asyncStreamReader));
-
-            if (streamingCallContext is null)
-                throw new ArgumentNullException(nameof(streamingCallContext));
-
-            if (callCleanUp is null)
-                throw new ArgumentNullException(nameof(callCleanUp));
-
-            return Observable.Create<MessageWithContext<TResponse, IStreamingCallContext>>(observable =>
-            {
-                var cancellationDisposable = new CancellationDisposable();
-
-                var subscribtion = asyncStreamReader
+            return Observable.Using(
+                () => callCleanUp,
+                _ => asyncStreamReader
                     .ReadAll()
-                    .Select(response => new MessageWithContext<TResponse, IStreamingCallContext>(response, streamingCallContext))
-                    .SubscribeSafe(observable);
-
-                return new CompositeDisposable(cancellationDisposable, subscribtion, callCleanUp);
-            });
+                    .Select(response => new MessageWithContext<TResponse, IStreamingCallContext>(response, streamingCallContext)));
         }
 
         /// <summary>
@@ -211,14 +198,8 @@ namespace Grpc.Reactive
         private static IObservable<Unit> WriteTo<TRequest>(this IObservable<TRequest> observable, IClientStreamWriter<TRequest> clientStreamWriter)
             where TRequest : class, IMessage<TRequest>
         {
-            if (observable is null)
-                throw new ArgumentNullException(nameof(observable));
-
-            if (clientStreamWriter is null)
-                throw new ArgumentNullException(nameof(clientStreamWriter));
-
             return observable
-                .Select(request => Observable.Defer(() => clientStreamWriter.WriteAsync(request).ToObservable()))
+                .Select(request => Observable.FromAsync(() => clientStreamWriter.WriteAsync(request)))
                 .Concat()
                 .Catch<Unit, Exception>(ex => CleanUp().Concat(Observable.Throw<Unit>(ex)))
                 .Concat(CleanUp());

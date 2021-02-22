@@ -12,6 +12,7 @@ namespace Grpc.Reactive.Context
         /// Asynchronous access to response headers.
         /// </summary>
         Task<Metadata> ResponseHeadersAsync { get; }
+
         //
         // Summary:
         //     Gets the call status if the call has already finished. Throws InvalidOperationException

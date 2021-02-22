@@ -1,12 +1,16 @@
 ﻿using Google.Protobuf;
 using Grpc.Core;
 using System;
+using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 
 namespace Grpc.Reactive
 {
-    internal static class ExtensionAsyncStreamReader
+    /// <summary>
+    /// Observable extension for <see cref="IAsyncStreamReader{T}"/>
+    /// </summary>
+    public static class ExtensionAsyncStreamReader
     {
         /// <summary>
         /// Reads all values from the stream into a observable.
@@ -17,24 +21,19 @@ namespace Grpc.Reactive
         public static IObservable<T> ReadAll<T>(this IAsyncStreamReader<T> asyncStreamReader)
             where T : class, IMessage<T>
         {
-            return Observable.Create<T>(async observer =>
-            {
-                var cancellationDisposable = new CancellationDisposable();
+            if (asyncStreamReader is null)
+                throw new ArgumentNullException(nameof(asyncStreamReader));
 
-                try
-                {
-                    while (await asyncStreamReader.MoveNext(cancellationDisposable.Token).ConfigureAwait(false))
-                        observer.OnNext(asyncStreamReader.Current);
-
-                    if (!cancellationDisposable.IsDisposed)
-                        observer.OnCompleted();
-                }
-                catch (Exception ex)
-                {
-                    observer.OnError(ex);
-                }
-                return cancellationDisposable;
-            });
+            return Observable.Using(
+               () => new CancellationDisposable(),
+               cancellationDisposable => Observable
+                    // Scheduler.CurrentThread is required for Repeat().TakeWhile(...)
+                    // https://stackoverflow.com/a/58529840
+                    .FromAsync(() => asyncStreamReader.MoveNext(cancellationDisposable.Token), Scheduler.Default)
+                    .Select(state => new { state, asyncStreamReader.Current })
+                    .Repeat()
+                    .TakeUntil(read => !read.state)
+                    .Select(read => read.Current));
         }
     }
 }

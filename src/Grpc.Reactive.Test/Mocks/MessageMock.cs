@@ -3,7 +3,7 @@ using Google.Protobuf.Reflection;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Grpc.Reactive.Test
+namespace Grpc.Reactive.Test.Mocks
 {
     public class MessageMock : IMessage<MessageMock>
     {
@@ -21,7 +21,7 @@ namespace Grpc.Reactive.Test
 
         public bool Equals([AllowNull] MessageMock other)
         {
-            throw new NotImplementedException();
+            return true;
         }
 
         public void MergeFrom(MessageMock message)

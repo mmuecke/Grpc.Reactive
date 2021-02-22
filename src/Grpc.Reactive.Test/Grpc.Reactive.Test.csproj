@@ -30,4 +30,8 @@
     <ProjectReference Include="..\Grpc.Reactive\Grpc.Reactive.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Server\" />
+  </ItemGroup>
+
 </Project>
